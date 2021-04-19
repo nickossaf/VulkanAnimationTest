@@ -1,6 +1,10 @@
 #include <iostream>
 
+#include "VulkanApp.h"
+
 int main()
 {
-    std::cout << "Hello, World" << std::endl;
+    VulkanApp app;
+    app.Init();
+    return 0;
 }
