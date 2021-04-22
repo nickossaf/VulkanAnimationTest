@@ -1,52 +1,71 @@
 cmake_minimum_required (VERSION 3.8)
-
 set(PROJECT_NAME ${PROJECT}-${BUILD_TYPE}.exe)
+
+if(WIN32)
+    set(TOOLCHAIN_PREFIX x86_64-w64-mingw32)
+    set(CMAKE_SYSTEM_NAME Windows)
+    set(CMAKE_C_COMPILER ${TOOLCHAIN_PREFIX}-gcc)  
+    set(CMAKE_CXX_COMPILER ${TOOLCHAIN_PREFIX}-g++)
+    set(CMAKE_RC_COMPILER ${TOOLCHAIN_PREFIX}-windres)
+    set(CMAKE_RANLIB ${TOOLCHAIN_PREFIX}-ranlib)
+    #set(CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES /usr/lib/gcc/${TOOLCHAIN_PREFIX}/7.3-posix)
+    #set(CMAKE_FIND_ROOT_PATH /usr/x86_64-w64-mingw32)
+    #set(C_INCLUDE_PATH /usr/x86_64-w64-mingw32/include)
+    #set(CPLUS_INCLUDE_PATH /usr/x86_64-w64-mingw32/include)
+    #set(CPP_INCLUDE_PATH /usr/x86_64-w64-mingw32/include)
+    #set(CXX_INCLUDE_PATH /usr/x86_64-w64-mingw32/include)
+    set(CMAKE_FIND_ROOT_PATH  /usr/lib/${TOOLCHAIN_PREFIX}/7.3-win32/include/c++)
+    set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+    set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY NEVER)
+    set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE NEVER)
+endif()
+
 project(${PROJECT_NAME})
-set(PROJECT_ROOT source)
-message("project root is ${PROJECT_ROOT}")
+
+#if (WIN32)
+#    set(VULKAN_HEADERS_INSTALL_DIR "/mnt/c/VulkanSDK/1.2.170.0/Include/vulkan") 
+#endif()
 
 find_package(Vulkan)
-find_package(SDL2 REQUIRED)
+if(WIN32)
+	if(NOT Vulkan_FOUND)
+		find_library(Vulkan_LIBRARY NAMES vulkan-1 vulkan PATHS ${CMAKE_SOURCE_DIR}/libs/vulkan)
+		if(Vulkan_LIBRARY)
+			set(Vulkan_FOUND ON)
+			MESSAGE("Using bundled Vulkan library version")
+        endif()
+    endif()
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVK_USE_PLATFORM_WIN32_KHR")
+endif()
+
+if (NOT Vulkan_FOUND)
+	message(FATAL_ERROR "Could not find Vulkan library!")
+else()
+	message(STATUS ${Vulkan_LIBRARY})
+endif()
 
 include_directories(${Vulkan_INCLUDE_DIR})
-include_directories(${SDL2_INCLUDE_DIRS})
-include_directories(${PROJECT_ROOT})
+set(ALL_LIBS  ${Vulkan_LIBRARY})
+link_libraries(${Vulkan_LIBRARY})
+message(${Vulkan_LIBRARY})
 
 # get rid of annoying MSVC warnings.
 add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 
-set(ALL_LIBS  ${Vulkan_LIBRARY} )
+set (CMAKE_CXX_STANDARD 17)
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
-
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS "-Wall -Wextra")
-if(BUILD_TYPE STREQUAL "dbg")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -g -O0 -DDEBUG -fsanitize=address -fsanitize-address-use-after-scope -fno-omit-frame-pointer -fsanitize=leak -fsanitize=undefined -fsanitize=bounds-strict")
-    message("DebugBuild")
-elseif(BUILD_TYPE STREQUAL "dev")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0 -DDEBUG")
-    message("DevelopBuild")
-elseif(BUILD_TYPE STREQUAL "rel")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2 -O3")
-    message("ReleaseBuild")
+if(WIN32)
+    
+    link_directories(${ADDITIONAL_LIBRARY_DIRS})
 endif()
 
-
-#if(WIN32)
-#  link_directories(${ADDITIONAL_LIBRARY_DIRS})
-#else()
-#  find_package(glfw3 REQUIRED)
-#  include_directories(${GLFW_INCLUDE_DIRS})
-#  set(ALL_LIBS ${ALL_LIBS} ${GLFW_LIBRARIES} )
-#endif()
-
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNOMINMAX -D_USE_MATH_DEFINES")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -idirafter /usr/include/")
 #uncomment this to detect broken memory problems via gcc sanitizers
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fsanitize-address-use-after-scope -fno-omit-frame-pointer -fsanitize=leak -fsanitize=undefined -fsanitize=bounds-strict")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fsanitize-address-use-after-scope -fno-omit-frame-pointer -fsanitize=leak -fsanitize=undefined -fsanitize=bounds-strict")
 
-file(GLOB_RECURSE PROJECT_SOURCES RELATIVE ${CMAKE_SOURCE_DIR} "${PROJECT_ROOT}/*.cpp")
-add_executable(${PROJECT_NAME} ${PROJECT_SOURCES})
+add_executable(${PROJECT_NAME} source/main.cpp source/VulkanApp.h source/VulkanApp.cpp)
 
-#set_target_properties(vulkan_minimal_graphics PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
-
-target_link_libraries(${PROJECT_NAME} ${SDL2_LIBRARIES} ${CMAKE_DL_LIBS} ${ALL_LIBS})
+set_target_properties(${PROJECT_NAME} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+#set_target_properties(${PROJECT_NAME} PROPERTIES LINK_LIBRARIES "%(AdditionalDependencies)")
+target_link_libraries(${PROJECT_NAME} ${ALL_LIBS})
