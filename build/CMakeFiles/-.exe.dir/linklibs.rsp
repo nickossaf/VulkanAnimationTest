@@ -1,0 +1,1 @@
+ -L/mnt/c/Users/Dell/Desktop/programs/vmk/CG2/vulkan-ray/lin/RayTracing/include/lib /mnt/c/WINDOWS/system32/vulkan-1.dll /mnt/c/WINDOWS/system32/vulkan-1.dll -lopengl32 -lglu32 -lopengl32 -lglfw3dll -lglu32 -lglfw3dll -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32 

@@ -22,10 +22,7 @@ endif()
 
 project(${PROJECT_NAME})
 
-#if (WIN32)
-#    set(VULKAN_HEADERS_INSTALL_DIR "/mnt/c/VulkanSDK/1.2.170.0/Include/vulkan") 
-#endif()
-
+find_package(OpenGL REQUIRED)
 find_package(Vulkan)
 if(WIN32)
 	if(NOT Vulkan_FOUND)
@@ -49,23 +46,31 @@ set(ALL_LIBS  ${Vulkan_LIBRARY})
 link_libraries(${Vulkan_LIBRARY})
 message(${Vulkan_LIBRARY})
 
+set(ADDITIONAL_INCLUDE_DIRS include/include)
+set(ADDITIONAL_LIBRARY_DIRS include/lib)   
+set(ADDITIONAL_RUNTIME_LIBRARY_DIRS include/bin) 
+include_directories(${ADDITIONAL_INCLUDE_DIRS})
+
 # get rid of annoying MSVC warnings.
 add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 
 set (CMAKE_CXX_STANDARD 17)
-
 if(WIN32)
-    
     link_directories(${ADDITIONAL_LIBRARY_DIRS})
+else()
+    find_package(glfw3 REQUIRED)
 endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNOMINMAX -D_USE_MATH_DEFINES")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -idirafter /usr/include/")
 #uncomment this to detect broken memory problems via gcc sanitizers
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fsanitize-address-use-after-scope -fno-omit-frame-pointer -fsanitize=leak -fsanitize=undefined -fsanitize=bounds-strict")
 
 add_executable(${PROJECT_NAME} source/main.cpp source/VulkanApp.h source/VulkanApp.cpp)
 
+target_include_directories(${PROJECT_NAME} PRIVATE ${OPENGL_INCLUDE_DIR})
 set_target_properties(${PROJECT_NAME} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 #set_target_properties(${PROJECT_NAME} PROPERTIES LINK_LIBRARIES "%(AdditionalDependencies)")
-target_link_libraries(${PROJECT_NAME} ${ALL_LIBS})
+#add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory include/bin build/)
+target_link_libraries(${PROJECT_NAME} ${ALL_LIBS} ${OPENGL_LIBRARY} ${OPENGL_gl_LIBRARY} glfw3dll)

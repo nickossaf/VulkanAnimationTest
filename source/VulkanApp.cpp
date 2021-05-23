@@ -1,29 +1,40 @@
 #include <iostream>
-#include <vector>
 #include <sstream>
 #include "VulkanApp.h"
 
-
 VulkanApp::~VulkanApp()
 {
+    vkDestroySwapchainKHR(device, screenBufferResources.swapChain, nullptr);
+    vkDestroySurfaceKHR(instance, surface, nullptr);
     vkDeviceWaitIdle(device);
     vkDestroyDevice(device, nullptr);
     vkDestroyInstance(instance, nullptr);
+    glfwDestroyWindow(window);
 }
 
 void VulkanApp::Init()
 {
+    glfwInit();
     createInstance();
     createPhysicalDevice();
+    createWindow();
     getQueueFamily();
+    createSwapchain();
     createDevice();
+
 }
 
 void VulkanApp::createInstance()
 {
+    std::vector<const char*> instanceExtensions;
+    uint32_t glfwExtensionCount = 0;
+    const char** glfwExtensions;
+    glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+    instanceExtensions = std::vector<const char*>(glfwExtensions, glfwExtensions + glfwExtensionCount);
+    
     VkApplicationInfo appInfo = {};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.pApplicationName = "RayTracing";
+    appInfo.pApplicationName = "Animation";
     appInfo.applicationVersion = 0;
     appInfo.apiVersion = VK_API_VERSION_1_0;
 
@@ -31,6 +42,8 @@ void VulkanApp::createInstance()
     createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     createInfo.flags = 0;
     createInfo.pApplicationInfo = &appInfo;
+    createInfo.enabledExtensionCount   = uint32_t(instanceExtensions.size());
+    createInfo.ppEnabledExtensionNames = instanceExtensions.data();
 
     VkResult result = vkCreateInstance(&createInfo, nullptr, &instance);
     if(result != VK_SUCCESS) 
@@ -92,6 +105,12 @@ void VulkanApp::getQueueFamily()
     } if (queueFamilyIdx == -1)
         RUN_TIME_ERROR("There is no families supporting requirements\n");
 
+    //// check if chosen famili idx support surface 
+    VkBool32 presentSupport = false;
+    vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, queueFamilyIdx, surface, &presentSupport);
+    if (!presentSupport)
+      throw std::runtime_error("vkGetPhysicalDeviceSurfaceSupportKHR: no present support for the target device and graphics queue");
+
 }
 
 void VulkanApp::createDevice()
@@ -110,6 +129,8 @@ void VulkanApp::createDevice()
     createInfo.flags = 0;
     createInfo.pQueueCreateInfos = &queueCreateInfo;  
     createInfo.queueCreateInfoCount = 1;
+    createInfo.enabledExtensionCount   = uint32_t(DEVICE_EXTENTIONS.size());
+    createInfo.ppEnabledExtensionNames = DEVICE_EXTENTIONS.data();
 
     VkResult result = vkCreateDevice(physicalDevice, &createInfo, nullptr, &device);
     if (result != VK_SUCCESS)
@@ -117,9 +138,132 @@ void VulkanApp::createDevice()
 
 }
 
+void VulkanApp::createWindow()
+{
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+    window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
+
+    if (glfwVulkanSupported() != GLFW_TRUE) 
+        RUN_TIME_ERROR("Error glfw do not support vulkan");
+
+
+    /*VkBool32 presentSupport = false;
+    uint32_t i = 0;
+    vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, surface, &presentSupport);
+    std::cerr << presentSupport << i;*/
+
+    if (glfwCreateWindowSurface(instance, window, nullptr, &surface) != VK_SUCCESS)
+        RUN_TIME_ERROR("Error glfwCreateWindowSurface failed to create window surface!");
+}
+
+void VulkanApp::createSwapchain()
+{
+
+    VkSurfaceCapabilitiesKHR surfaceCapabilities;
+    std::vector<VkSurfaceFormatKHR> formats;
+    std::vector<VkPresentModeKHR> presentModes;
+    uint32_t formatCount;
+    uint32_t presentModeCount;
+
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &surfaceCapabilities);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, nullptr);
+    if (formatCount != 0) {
+        formats.resize(formatCount);
+        vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, formats.data());
+    }
+    vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, nullptr);
+    if (presentModeCount != 0) {
+        presentModes.resize(presentModeCount);
+        vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &presentModeCount, presentModes.data());
+    }
+
+    VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(formats);
+    VkSwapchainCreateInfoKHR createInfo = {};
+    createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+    createInfo.pNext = nullptr;
+    createInfo.surface = surface;
+    createInfo.minImageCount = chooseImageCount(surfaceCapabilities);
+    createInfo.imageFormat = surfaceFormat.format;
+    createInfo.imageColorSpace = surfaceFormat.colorSpace;
+    createInfo.imageExtent = chooseSwapExtent(surfaceCapabilities, WIDTH, HEIGHT);
+    createInfo.imageArrayLayers = 1;
+    createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    createInfo.preTransform = surfaceCapabilities.currentTransform;
+    createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    createInfo.presentMode = chooseSwapPresentMode(presentModes);
+    createInfo.clipped = VK_TRUE;
+    createInfo.oldSwapchain = VK_NULL_HANDLE;
+
+    if (vkCreateSwapchainKHR(device, &createInfo, nullptr, &screenBufferResources.swapChain) != VK_SUCCESS)
+        RUN_TIME_ERROR("Error failed to create swap chain!");
+
+    //uint32_t imageCount = 0;
+    //vkGetSwapchainImagesKHR(device, screenBufferResources.swapChain, &imageCount, nullptr);
+    //screenBufferResources.swapChainImages.resize(imageCount);
+    //vkGetSwapchainImagesKHR(device, screenBufferResources.swapChain, &imageCount, screenBufferResources.swapChainImages.data());
+
+}
+
+
+VkDevice& VulkanApp::operator()()
+{
+    return device;
+}
+
+
 static void RunTimeError(const char* file, int line, const char* msg)
 {
     std::stringstream strout;
     strout << "runtime_error at " << file << ", line " << line << ": " << msg << std::endl;
     throw std::runtime_error(strout.str().c_str());
 }
+
+VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) 
+{
+    for (const auto& availableFormat : availableFormats) {
+        if (availableFormat.format == VK_FORMAT_B8G8R8A8_UNORM && 
+            availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+            return availableFormat;
+        }
+    }
+    return availableFormats[0];
+}
+
+VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) 
+{
+    for (const auto& availablePresentMode : availablePresentModes) {
+        if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
+            return availablePresentMode;
+        } else if (availablePresentMode == VK_PRESENT_MODE_IMMEDIATE_KHR) {
+            return availablePresentMode;
+        }
+    }
+    return VK_PRESENT_MODE_FIFO_KHR;
+}
+
+VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, int width, int height) 
+{
+    if (capabilities.currentExtent.width != UINT32_MAX) {
+        return capabilities.currentExtent;
+    } else {
+        VkExtent2D actualExtent = { uint32_t(width), uint32_t(height) };
+
+        actualExtent.width  = std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, actualExtent.width));
+        actualExtent.height = std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, actualExtent.height));
+
+        return actualExtent;
+    }
+}
+
+uint32_t chooseImageCount(const VkSurfaceCapabilitiesKHR& capabilities)
+{
+    uint32_t imageCount = capabilities.minImageCount + 1;
+    if (capabilities.maxImageCount > 0 && imageCount > capabilities.maxImageCount) {
+        imageCount = capabilities.maxImageCount;
+    }
+    return imageCount;
+}
+
+
