@@ -21,11 +21,6 @@ const std::vector<const char*> DEVICE_EXTENTIONS = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME
 };
 
-const std::vector<const char*> INSTANCE_EXTENTIONS = {
-    VK_KHR_SURFACE_EXTENSION_NAME
-};
-
-
 struct ScreenBufferResources
 {
     VkSwapchainKHR             swapChain;
@@ -57,6 +52,8 @@ private:
     VkSurfaceKHR          surface;
     ScreenBufferResources screenBufferResources;
 
+    VkRenderPass          renderPass;
+
     void createInstance();
     void createPhysicalDevice();
     void getQueueFamily();
@@ -64,6 +61,7 @@ private:
     void checkProperties();
     void createWindow();
     void createSwapchain();
+    void createRenderPass();
 };
 
 static void RunTimeError(const char* file, int line, const char* msg);

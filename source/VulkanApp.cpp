@@ -4,12 +4,14 @@
 
 VulkanApp::~VulkanApp()
 {
+    
     vkDestroySwapchainKHR(device, screenBufferResources.swapChain, nullptr);
     vkDestroySurfaceKHR(instance, surface, nullptr);
     vkDeviceWaitIdle(device);
     vkDestroyDevice(device, nullptr);
     vkDestroyInstance(instance, nullptr);
     glfwDestroyWindow(window);
+    glfwTerminate();
 }
 
 void VulkanApp::Init()
@@ -19,8 +21,11 @@ void VulkanApp::Init()
     createPhysicalDevice();
     createWindow();
     getQueueFamily();
-    createSwapchain();
     createDevice();
+    createSwapchain();
+
+    createRenderPass();
+
 
 }
 
@@ -179,6 +184,7 @@ void VulkanApp::createSwapchain()
     }
 
     VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(formats);
+    VkExtent2D extent = chooseSwapExtent(surfaceCapabilities, WIDTH, HEIGHT);
     VkSwapchainCreateInfoKHR createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     createInfo.pNext = nullptr;
@@ -186,7 +192,7 @@ void VulkanApp::createSwapchain()
     createInfo.minImageCount = chooseImageCount(surfaceCapabilities);
     createInfo.imageFormat = surfaceFormat.format;
     createInfo.imageColorSpace = surfaceFormat.colorSpace;
-    createInfo.imageExtent = chooseSwapExtent(surfaceCapabilities, WIDTH, HEIGHT);
+    createInfo.imageExtent = extent;
     createInfo.imageArrayLayers = 1;
     createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -199,13 +205,57 @@ void VulkanApp::createSwapchain()
     if (vkCreateSwapchainKHR(device, &createInfo, nullptr, &screenBufferResources.swapChain) != VK_SUCCESS)
         RUN_TIME_ERROR("Error failed to create swap chain!");
 
-    //uint32_t imageCount = 0;
-    //vkGetSwapchainImagesKHR(device, screenBufferResources.swapChain, &imageCount, nullptr);
-    //screenBufferResources.swapChainImages.resize(imageCount);
-    //vkGetSwapchainImagesKHR(device, screenBufferResources.swapChain, &imageCount, screenBufferResources.swapChainImages.data());
+    screenBufferResources.swapChainImageFormat = surfaceFormat.format;
+    screenBufferResources.swapChainExtent = extent;
+
+    uint32_t imageCount = 0;
+    vkGetSwapchainImagesKHR(device, screenBufferResources.swapChain, &imageCount, nullptr);
+    screenBufferResources.swapChainImages.resize(imageCount);
+    vkGetSwapchainImagesKHR(device, screenBufferResources.swapChain, &imageCount, screenBufferResources.swapChainImages.data());
 
 }
 
+void VulkanApp::createRenderPass()
+  {
+    VkAttachmentDescription colorAttachment = {};
+    colorAttachment.format         = screenBufferResources.swapChainImageFormat;
+    colorAttachment.samples        = VK_SAMPLE_COUNT_1_BIT;
+    colorAttachment.loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    colorAttachment.storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
+    colorAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    colorAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
+    colorAttachment.finalLayout    = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+    VkAttachmentReference colorAttachmentRef = {};
+    colorAttachmentRef.attachment = 0;
+    colorAttachmentRef.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass  = {};
+    subpass.pipelineBindPoint     = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.colorAttachmentCount  = 1;
+    subpass.pColorAttachments     = &colorAttachmentRef;
+
+    VkSubpassDependency dependency = {};
+    dependency.srcSubpass    = VK_SUBPASS_EXTERNAL;
+    dependency.dstSubpass    = 0;
+    dependency.srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.srcAccessMask = 0;
+    dependency.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+    VkRenderPassCreateInfo renderPassInfo = {};
+    renderPassInfo.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    renderPassInfo.attachmentCount = 1;
+    renderPassInfo.pAttachments    = &colorAttachment;
+    renderPassInfo.subpassCount    = 1;
+    renderPassInfo.pSubpasses      = &subpass;
+    renderPassInfo.dependencyCount = 1;
+    renderPassInfo.pDependencies   = &dependency;
+
+    if (vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS)
+        RUN_TIME_ERROR("CreateRenderPass: failed to create render pass!");
+  }
 
 VkDevice& VulkanApp::operator()()
 {
