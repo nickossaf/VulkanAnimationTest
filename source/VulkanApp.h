@@ -46,30 +46,34 @@ public:
         requiredQuequeProps(VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_TRANSFER_BIT){};
     ~VulkanApp();
     void Init();
+    void Run();
     VkDevice& operator()();
 
 
 private:
-    const VkQueueFlags    requiredQuequeProps;
-    VkInstance            instance;
-    VkPhysicalDevice      physicalDevice;
-    VkDevice              device;
-    uint32_t              queueFamilyIdx;
-    VkQueue               graphicsQueue;
-    VkQueue               presentQueue;
+    const VkQueueFlags           requiredQuequeProps;
+    VkInstance                   instance;
+    VkPhysicalDevice             physicalDevice;
+    VkDevice                     device;
+    uint32_t                     queueFamilyIdx;
+    VkQueue                      graphicsQueue;
+    VkQueue                      presentQueue;
 
-    GLFWwindow*           window;
-    VkSurfaceKHR          surface;
-    ScreenBufferResources screenBufferResources;
+    GLFWwindow*                  window;
+    VkSurfaceKHR                 surface;
+    ScreenBufferResources        screenBufferResources;
+    size_t                       currentFrame;
 
-    VkBuffer              vertexBuffer;
-    VkDeviceMemory        vertexMemory;
+    VkBuffer                     vertexBuffer;
+    VkDeviceMemory               vertexMemory;
 
-    SyncObj               syncObj;
+    SyncObj                      syncObj;
+    VkCommandPool                commandPool;
+    std::vector<VkCommandBuffer> commandBuffers;
 
-    VkRenderPass          renderPass;
-    VkPipelineLayout      pipelineLayout;
-    VkPipeline            pipeline;
+    VkRenderPass                 renderPass;
+    VkPipelineLayout             pipelineLayout;
+    VkPipeline                   pipeline;
 
     void createInstance();
     void createPhysicalDevice();
@@ -84,7 +88,10 @@ private:
     void createFrameBuffer();
     void createVertexBuffer();
     void createSyncObjects();
-
+    void createCommandPool();
+    void createCommandBuffers();
+    void copyVertices2GPU(float* vertices);
+    void drawFrame();
 
     VkShaderModule createShaderModule(const std::vector<uint32_t>& code);
 

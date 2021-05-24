@@ -8,6 +8,7 @@ VulkanApp::~VulkanApp()
 {
     vkFreeMemory(device, vertexMemory, NULL);
     vkDestroyBuffer(device, vertexBuffer, NULL);
+    vkDestroyCommandPool(device, commandPool, nullptr);
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         vkDestroySemaphore(device, syncObj.renderFinishedSemaphores[i], nullptr);
@@ -30,7 +31,6 @@ VulkanApp::~VulkanApp()
     vkDestroySwapchainKHR(device, screenBufferResources.swapChain, nullptr);
     vkDestroySurfaceKHR(instance, surface, nullptr);
     
-    vkDeviceWaitIdle(device);
     vkDestroyDevice(device, nullptr);
     vkDestroyInstance(instance, nullptr);
     
@@ -51,8 +51,30 @@ void VulkanApp::Init()
     createRenderPass();
     createGraphicsPipeline();
     createFrameBuffer();
-
     createVertexBuffer();
+    createSyncObjects();
+
+    createCommandPool();
+    createCommandBuffers();
+
+    float trianglePos[] =
+    {
+        -0.5f, -0.5f,
+        0.5f, -0.5f,
+        0.0f, +0.5f,
+    };
+
+    copyVertices2GPU(trianglePos);
+}
+
+void VulkanApp::Run()
+{
+    while (!glfwWindowShouldClose(window)) {
+      glfwPollEvents();
+      drawFrame();
+    }
+
+    vkDeviceWaitIdle(device);
 }
 
 void VulkanApp::createInstance()
@@ -529,6 +551,149 @@ void VulkanApp::createSyncObjects()
         }
     }
 }
+
+void VulkanApp::createCommandPool()
+{
+    VkCommandPoolCreateInfo poolInfo = {};
+    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    poolInfo.queueFamilyIndex = queueFamilyIdx;
+
+    if (vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS)
+        RUN_TIME_ERROR("createCommandPool failed to create command pool!");    
+}
+
+void VulkanApp::createCommandBuffers() 
+{
+    commandBuffers.resize(screenBufferResources.swapChainFramebuffers.size());
+
+    VkCommandBufferAllocateInfo allocInfo = {};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.commandPool = commandPool;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandBufferCount = (uint32_t)commandBuffers.size();
+
+    if (vkAllocateCommandBuffers(device, &allocInfo, commandBuffers.data()) != VK_SUCCESS)
+        RUN_TIME_ERROR("createCommandBuffers: failed to allocate command buffers!");
+
+    for (size_t i = 0; i < commandBuffers.size(); i++) {
+        VkCommandBufferBeginInfo beginInfo = {};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+        if (vkBeginCommandBuffer(commandBuffers[i], &beginInfo) != VK_SUCCESS) 
+            RUN_TIME_ERROR("createCommandBuffers: failed to begin recording command buffer!");
+
+        VkRenderPassBeginInfo renderPassInfo = {};
+        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        renderPassInfo.renderPass = renderPass;
+        renderPassInfo.framebuffer = screenBufferResources.swapChainFramebuffers[i];
+        renderPassInfo.renderArea.offset = { 0, 0 };
+        renderPassInfo.renderArea.extent = screenBufferResources.swapChainExtent;
+
+        VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
+        renderPassInfo.clearValueCount = 1;
+        renderPassInfo.pClearValues = &clearColor;
+
+        vkCmdBeginRenderPass(commandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+        vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+
+        VkBuffer vertexBuffers[] = { vertexBuffer };
+        VkDeviceSize offsets[]   = { 0 };
+        vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, vertexBuffers, offsets);
+
+        vkCmdDraw(commandBuffers[i], 3, 1, 0, 0);
+        vkCmdEndRenderPass(commandBuffers[i]);
+
+        if (vkEndCommandBuffer(commandBuffers[i]) != VK_SUCCESS) 
+            RUN_TIME_ERROR("failed to record command buffer!");
+        
+    }
+}
+
+void VulkanApp::copyVertices2GPU(float* vertices)
+{
+    VkCommandBufferAllocateInfo allocInfo = {};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.commandPool = commandPool;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandBufferCount = 1;
+
+    VkCommandBuffer cmdBuff;
+    if (vkAllocateCommandBuffers(device, &allocInfo, &cmdBuff) != VK_SUCCESS)
+        RUN_TIME_ERROR("copyVertices2GPU: failed to allocate command buffer!");
+
+    VkCommandBufferBeginInfo beginInfo = {};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT; 
+    
+    vkBeginCommandBuffer(cmdBuff, &beginInfo);
+    vkCmdUpdateBuffer(cmdBuff, vertexBuffer, 0, 6 * sizeof(float), vertices);
+    vkEndCommandBuffer(cmdBuff);
+
+    VkSubmitInfo submitInfo = {};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1; 
+    submitInfo.pCommandBuffers = &cmdBuff;
+                                         
+    VkFence fence;
+    VkFenceCreateInfo fenceCreateInfo = {};
+    fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceCreateInfo.flags = 0;
+    if (vkCreateFence(device, &fenceCreateInfo, NULL, &fence) != VK_SUCCESS)
+        RUN_TIME_ERROR("copyVertices2GPU: error creating fense");
+
+    if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, fence) != VK_SUCCESS)
+        RUN_TIME_ERROR("copyVertices2GPU: submit failed");
+
+    if (vkWaitForFences(device, 1, &fence, VK_TRUE, 100000000000) != VK_SUCCESS)
+        RUN_TIME_ERROR("copyVertices2GPU: fence wait failed");
+
+    vkDestroyFence(device, fence, NULL);
+
+    vkFreeCommandBuffers(device, commandPool, 1, &cmdBuff);
+}
+
+void VulkanApp::drawFrame()
+{
+    vkWaitForFences(device, 1, &syncObj.inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
+    vkResetFences  (device, 1, &syncObj.inFlightFences[currentFrame]);
+
+    uint32_t imageIndex;
+    vkAcquireNextImageKHR(device, screenBufferResources.swapChain, UINT64_MAX, syncObj.imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+
+    VkSemaphore waitSemaphores[] = { syncObj.imageAvailableSemaphores[currentFrame] };
+    VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+
+    VkSubmitInfo submitInfo = {};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.waitSemaphoreCount = 1;
+    submitInfo.pWaitSemaphores = waitSemaphores;
+    submitInfo.pWaitDstStageMask = waitStages;
+
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &commandBuffers[imageIndex];
+
+    VkSemaphore signalSemaphores[] = { syncObj.renderFinishedSemaphores[currentFrame] };
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = signalSemaphores;
+
+    if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, syncObj.inFlightFences[currentFrame]) != VK_SUCCESS)
+        RUN_TIME_ERROR("drawFrame: failed to submit draw command buffer!");
+
+    VkPresentInfoKHR presentInfo = {};
+    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores= signalSemaphores;
+
+    VkSwapchainKHR swapChains[] = { screenBufferResources.swapChain };
+    presentInfo.swapchainCount = 1;
+    presentInfo.pSwapchains = swapChains;
+    presentInfo.pImageIndices = &imageIndex;
+
+    vkQueuePresentKHR(presentQueue, &presentInfo);
+    currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+}
+
 
 VkShaderModule VulkanApp::createShaderModule(const std::vector<uint32_t>& code)
 {

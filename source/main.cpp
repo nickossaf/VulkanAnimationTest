@@ -6,5 +6,6 @@ int main()
 {
     VulkanApp app;
     app.Init();
+    app.Run();
     return 0;
 }
