@@ -11,6 +11,8 @@ iostream
 -
 sstream
 -
+cmath
+-
 VulkanApp.h
 /mnt/c/Users/Dell/Desktop/programs/vmk/CG2/vulkan-ray/lin/RayTracing/source/VulkanApp.h
 

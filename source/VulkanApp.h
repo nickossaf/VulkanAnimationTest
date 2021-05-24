@@ -53,6 +53,8 @@ private:
     ScreenBufferResources screenBufferResources;
 
     VkRenderPass          renderPass;
+    VkPipelineLayout      pipelineLayout;
+    VkPipeline            pipeline;
 
     void createInstance();
     void createPhysicalDevice();
@@ -62,6 +64,10 @@ private:
     void createWindow();
     void createSwapchain();
     void createRenderPass();
+    void createGraphicsPipeline();
+
+    VkShaderModule createShaderModule(const std::vector<uint32_t>& code);
+
 };
 
 static void RunTimeError(const char* file, int line, const char* msg);
@@ -70,9 +76,7 @@ VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>
 VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
 VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, int width, int height);
 uint32_t chooseImageCount(const VkSurfaceCapabilitiesKHR& capabilities);
-
-
-
+void loadShaderModule(const char* filename, std::vector<uint32_t>& data);
 
 #undef  RUN_TIME_ERROR
 #undef  RUN_TIME_ERROR_AT
