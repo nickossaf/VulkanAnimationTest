@@ -16,6 +16,7 @@
 
 const int WIDTH  = 600;
 const int HEIGHT = 600;
+const int MAX_FRAMES_IN_FLIGHT = 2;
 
 const std::vector<const char*> DEVICE_EXTENTIONS = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME
@@ -30,6 +31,13 @@ struct ScreenBufferResources
     std::vector<VkImageView>   swapChainImageViews;
     std::vector<VkFramebuffer> swapChainFramebuffers;
 };
+
+  struct SyncObj
+  {
+    std::vector<VkSemaphore> imageAvailableSemaphores;
+    std::vector<VkSemaphore> renderFinishedSemaphores;
+    std::vector<VkFence>     inFlightFences;
+  };
 
 class VulkanApp
 {
@@ -47,10 +55,17 @@ private:
     VkPhysicalDevice      physicalDevice;
     VkDevice              device;
     uint32_t              queueFamilyIdx;
+    VkQueue               graphicsQueue;
+    VkQueue               presentQueue;
 
     GLFWwindow*           window;
     VkSurfaceKHR          surface;
     ScreenBufferResources screenBufferResources;
+
+    VkBuffer              vertexBuffer;
+    VkDeviceMemory        vertexMemory;
+
+    SyncObj               syncObj;
 
     VkRenderPass          renderPass;
     VkPipelineLayout      pipelineLayout;
@@ -63,8 +78,13 @@ private:
     void checkProperties();
     void createWindow();
     void createSwapchain();
+    void createScreenImageViews();
     void createRenderPass();
     void createGraphicsPipeline();
+    void createFrameBuffer();
+    void createVertexBuffer();
+    void createSyncObjects();
+
 
     VkShaderModule createShaderModule(const std::vector<uint32_t>& code);
 

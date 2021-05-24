@@ -6,14 +6,34 @@
 
 VulkanApp::~VulkanApp()
 {
+    vkFreeMemory(device, vertexMemory, NULL);
+    vkDestroyBuffer(device, vertexBuffer, NULL);
+
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        vkDestroySemaphore(device, syncObj.renderFinishedSemaphores[i], nullptr);
+        vkDestroySemaphore(device, syncObj.imageAvailableSemaphores[i], nullptr);
+        vkDestroyFence(device, syncObj.inFlightFences[i], nullptr);
+    }
+    
+    for (auto framebuffer : screenBufferResources.swapChainFramebuffers) {
+      vkDestroyFramebuffer(device, framebuffer, nullptr);
+    }
+
+    for (auto imageView : screenBufferResources.swapChainImageViews) {
+      vkDestroyImageView(device, imageView, nullptr);
+    }
+    
     vkDestroyPipeline(device, pipeline, nullptr);
     vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
     vkDestroyRenderPass(device, renderPass, nullptr);
+    
     vkDestroySwapchainKHR(device, screenBufferResources.swapChain, nullptr);
     vkDestroySurfaceKHR(instance, surface, nullptr);
+    
     vkDeviceWaitIdle(device);
     vkDestroyDevice(device, nullptr);
     vkDestroyInstance(instance, nullptr);
+    
     glfwDestroyWindow(window);
     glfwTerminate();
 }
@@ -30,7 +50,9 @@ void VulkanApp::Init()
 
     createRenderPass();
     createGraphicsPipeline();
+    createFrameBuffer();
 
+    createVertexBuffer();
 }
 
 void VulkanApp::createInstance()
@@ -145,6 +167,9 @@ void VulkanApp::createDevice()
     if (result != VK_SUCCESS)
         RUN_TIME_ERROR("Error creating logical device\n");
 
+    vkGetDeviceQueue(device, queueFamilyIdx, 0, &graphicsQueue);
+    vkGetDeviceQueue(device, queueFamilyIdx, 0, &presentQueue);
+
 }
 
 void VulkanApp::createWindow()
@@ -216,6 +241,33 @@ void VulkanApp::createSwapchain()
     vkGetSwapchainImagesKHR(device, screenBufferResources.swapChain, &imageCount, nullptr);
     screenBufferResources.swapChainImages.resize(imageCount);
     vkGetSwapchainImagesKHR(device, screenBufferResources.swapChain, &imageCount, screenBufferResources.swapChainImages.data());
+
+    createScreenImageViews();
+}
+
+void VulkanApp::createScreenImageViews()
+{
+    screenBufferResources.swapChainImageViews.resize(screenBufferResources.swapChainImages.size());
+
+    for (size_t i = 0; i < screenBufferResources.swapChainImages.size(); i++) {
+        VkImageViewCreateInfo createInfo = {};
+        createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        createInfo.image = screenBufferResources.swapChainImages[i];
+        createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        createInfo.format = screenBufferResources.swapChainImageFormat;
+        createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+        createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        createInfo.subresourceRange.baseMipLevel = 0;
+        createInfo.subresourceRange.levelCount = 1;
+        createInfo.subresourceRange.baseArrayLayer = 0;
+        createInfo.subresourceRange.layerCount = 1;
+
+        if (vkCreateImageView(device, &createInfo, nullptr, &screenBufferResources.swapChainImageViews[i]) != VK_SUCCESS)
+            RUN_TIME_ERROR("createScreenImageViews failed to create image views!");
+    }
 
 }
 
@@ -390,6 +442,92 @@ void VulkanApp::createGraphicsPipeline()
 
     vkDestroyShaderModule(device, vertShaderModule, nullptr);
     vkDestroyShaderModule(device, fragShaderModule, nullptr);
+}
+
+void VulkanApp::createFrameBuffer()
+{
+    screenBufferResources.swapChainFramebuffers.resize(screenBufferResources.swapChainImageViews.size());
+
+    for (size_t i = 0; i < screenBufferResources.swapChainImageViews.size(); i++) {
+        VkImageView attachments[] = { screenBufferResources.swapChainImageViews[i] };
+
+        VkFramebufferCreateInfo framebufferInfo = {};
+        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        framebufferInfo.renderPass = renderPass;
+        framebufferInfo.attachmentCount = 1;
+        framebufferInfo.pAttachments = attachments;
+        framebufferInfo.width = screenBufferResources.swapChainExtent.width;
+        framebufferInfo.height = screenBufferResources.swapChainExtent.height;
+        framebufferInfo.layers = 1;
+
+        if (vkCreateFramebuffer(device, &framebufferInfo, nullptr, &screenBufferResources.swapChainFramebuffers[i]) != VK_SUCCESS)
+            RUN_TIME_ERROR("failed to create framebuffer!");
+    }
+}
+
+void VulkanApp::createVertexBuffer()
+{
+    VkBufferCreateInfo bufferCreateInfo = {};
+    bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferCreateInfo.pNext = nullptr;
+    bufferCreateInfo.size = 6*2*sizeof(float);                         
+    bufferCreateInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;            
+
+    if (vkCreateBuffer(device, &bufferCreateInfo, NULL, &vertexBuffer) != VK_SUCCESS)
+        RUN_TIME_ERROR("Error creating vertex buffer");
+    
+    VkMemoryRequirements memoryRequirements;
+    vkGetBufferMemoryRequirements(device, vertexBuffer, &memoryRequirements);
+
+    uint32_t memoryTypeIndex = -1;
+    VkPhysicalDeviceMemoryProperties memoryProperties;
+    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
+    for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; ++i)
+    {
+        if ((memoryRequirements.memoryTypeBits & (1 << i)) &&
+            ((memoryProperties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)) {
+                memoryTypeIndex = i;
+                break;
+            }
+    }
+
+    VkMemoryAllocateInfo allocateInfo = {};
+    allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocateInfo.pNext = nullptr;
+    allocateInfo.allocationSize = memoryRequirements.size;
+    allocateInfo.memoryTypeIndex = memoryTypeIndex;
+
+    if (vkAllocateMemory(device, &allocateInfo, nullptr, &vertexMemory) != VK_SUCCESS)
+        RUN_TIME_ERROR("Error allocating vertex memmory");
+  
+
+    if (vkBindBufferMemory(device, vertexBuffer, vertexMemory, 0) != VK_SUCCESS)
+        RUN_TIME_ERROR("Error binding vertex memmory");
+  
+}
+
+void VulkanApp::createSyncObjects()
+{
+    syncObj.imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+    syncObj.renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+    syncObj.inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+
+    VkSemaphoreCreateInfo semaphoreInfo = {};
+    semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+    VkFenceCreateInfo fenceInfo = {};
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) 
+    {
+        if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &syncObj.imageAvailableSemaphores[i]) != VK_SUCCESS ||
+            vkCreateSemaphore(device, &semaphoreInfo, nullptr, &syncObj.renderFinishedSemaphores[i]) != VK_SUCCESS ||
+            vkCreateFence    (device, &fenceInfo,     nullptr, &syncObj.inFlightFences[i]) != VK_SUCCESS) {
+            RUN_TIME_ERROR("createSyncObjects failed to create synchronization objects for a frame!");
+        }
+    }
 }
 
 VkShaderModule VulkanApp::createShaderModule(const std::vector<uint32_t>& code)
