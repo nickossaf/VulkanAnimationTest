@@ -13,10 +13,14 @@
 
 #include <vulkan/vulkan.h>
 #include <vector>
+#include <cstring>
 
-const int WIDTH  = 600;
-const int HEIGHT = 600;
+const int WIDTH  = 800;
+const int HEIGHT = 1000;
 const int MAX_FRAMES_IN_FLIGHT = 2;
+
+static char g_validationLayerData[256];
+static const char* g_debugReportExtName  = VK_EXT_DEBUG_REPORT_EXTENSION_NAME;
 
 const std::vector<const char*> DEVICE_EXTENTIONS = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME
@@ -94,6 +98,23 @@ private:
     void drawFrame();
 
     VkShaderModule createShaderModule(const std::vector<uint32_t>& code);
+
+    static VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallbackFn(
+    VkDebugReportFlagsEXT                       flags,
+    VkDebugReportObjectTypeEXT                  objectType,
+    uint64_t                                    object,
+    size_t                                      location,
+    int32_t                                     messageCode,
+    const char*                                 pLayerPrefix,
+    const char*                                 pMessage,
+    void*                                       pUserData)
+    {
+        printf("[Debug Report]: %s: %s\n", pLayerPrefix, pMessage);
+        return VK_FALSE;
+    };
+    VkDebugReportCallbackEXT debugReportCallback;
+    std::vector<const char*> enabledLayers;
+    void initDebugReportCallback();
 
 };
 

@@ -25,6 +25,8 @@ vulkan/vulkan.h
 -
 vector
 -
+cstring
+-
 
 /mnt/c/Users/Dell/Desktop/programs/vmk/CG2/vulkan-ray/lin/RayTracing/source/main.cpp
 iostream

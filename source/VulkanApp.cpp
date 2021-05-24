@@ -8,6 +8,12 @@ VulkanApp::~VulkanApp()
 {
     vkFreeMemory(device, vertexMemory, NULL);
     vkDestroyBuffer(device, vertexBuffer, NULL);
+
+    auto func = (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugReportCallbackEXT");
+    if (func == nullptr)
+        RUN_TIME_ERROR("Could not load vkDestroyDebugReportCallbackEXT");
+    func(instance, debugReportCallback, NULL);
+
     vkDestroyCommandPool(device, commandPool, nullptr);
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
@@ -42,6 +48,7 @@ void VulkanApp::Init()
 {
     glfwInit();
     createInstance();
+    initDebugReportCallback();
     createPhysicalDevice();
     createWindow();
     getQueueFamily();
@@ -70,8 +77,8 @@ void VulkanApp::Init()
 void VulkanApp::Run()
 {
     while (!glfwWindowShouldClose(window)) {
-      glfwPollEvents();
-      drawFrame();
+        glfwPollEvents();
+        drawFrame();
     }
 
     vkDeviceWaitIdle(device);
@@ -79,11 +86,53 @@ void VulkanApp::Run()
 
 void VulkanApp::createInstance()
 {
+    uint32_t layerCount;
+    vkEnumerateInstanceLayerProperties(&layerCount, NULL);
+    std::vector<VkLayerProperties> layerProperties(layerCount);
+    vkEnumerateInstanceLayerProperties(&layerCount, layerProperties.data());
+
+    bool foundLayer = false;
+    for (VkLayerProperties prop : layerProperties) {
+        std::cout << prop.layerName <<std::endl;
+        if (strcmp("VK_LAYER_LUNARG_standard_validation", prop.layerName) == 0 || 
+            strcmp("VK_LAYER_KHRONOS_validation", prop.layerName) == 0) {
+            strncpy(g_validationLayerData, prop.layerName, 256);
+            foundLayer = true;
+            break;
+        }
+
+    }
+
+    if (!foundLayer)
+      RUN_TIME_ERROR("Layer VK_LAYER_LUNARG_standard_validation not supported\n");
+
+    enabledLayers.push_back(g_validationLayerData); 
+    uint32_t extensionCount;
+
+    vkEnumerateInstanceExtensionProperties(NULL, &extensionCount, NULL);
+    std::vector<VkExtensionProperties> extensionProperties(extensionCount);
+    vkEnumerateInstanceExtensionProperties(NULL, &extensionCount, extensionProperties.data());
+
+    bool foundExtension = false;
+    for (VkExtensionProperties prop : extensionProperties) {
+        if (strcmp(VK_EXT_DEBUG_REPORT_EXTENSION_NAME, prop.extensionName) == 0) {
+            foundExtension = true;
+            break;
+        }
+
+    }
+
+    if (!foundExtension)
+      RUN_TIME_ERROR("Extension VK_EXT_DEBUG_REPORT_EXTENSION_NAME not supported\n");
+
+    
     std::vector<const char*> instanceExtensions;
     uint32_t glfwExtensionCount = 0;
     const char** glfwExtensions;
     glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
     instanceExtensions = std::vector<const char*>(glfwExtensions, glfwExtensions + glfwExtensionCount);
+    instanceExtensions.push_back(g_debugReportExtName);
+
     
     VkApplicationInfo appInfo = {};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -97,6 +146,8 @@ void VulkanApp::createInstance()
     createInfo.pApplicationInfo = &appInfo;
     createInfo.enabledExtensionCount   = uint32_t(instanceExtensions.size());
     createInfo.ppEnabledExtensionNames = instanceExtensions.data();
+    createInfo.enabledLayerCount = uint32_t(enabledLayers.size());
+    createInfo.ppEnabledLayerNames = enabledLayers.data();
 
     VkResult result = vkCreateInstance(&createInfo, nullptr, &instance);
     if(result != VK_SUCCESS) 
@@ -184,6 +235,8 @@ void VulkanApp::createDevice()
     createInfo.queueCreateInfoCount = 1;
     createInfo.enabledExtensionCount   = uint32_t(DEVICE_EXTENTIONS.size());
     createInfo.ppEnabledExtensionNames = DEVICE_EXTENTIONS.data();
+    createInfo.enabledLayerCount = uint32_t(enabledLayers.size());
+    createInfo.ppEnabledLayerNames = enabledLayers.data();
 
     VkResult result = vkCreateDevice(physicalDevice, &createInfo, nullptr, &device);
     if (result != VK_SUCCESS)
@@ -655,11 +708,11 @@ void VulkanApp::copyVertices2GPU(float* vertices)
 void VulkanApp::drawFrame()
 {
     vkWaitForFences(device, 1, &syncObj.inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
-    vkResetFences  (device, 1, &syncObj.inFlightFences[currentFrame]);
+    vkResetFences(device, 1, &syncObj.inFlightFences[currentFrame]);
 
     uint32_t imageIndex;
     vkAcquireNextImageKHR(device, screenBufferResources.swapChain, UINT64_MAX, syncObj.imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
-
+    
     VkSemaphore waitSemaphores[] = { syncObj.imageAvailableSemaphores[currentFrame] };
     VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 
@@ -675,10 +728,9 @@ void VulkanApp::drawFrame()
     VkSemaphore signalSemaphores[] = { syncObj.renderFinishedSemaphores[currentFrame] };
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
-
     if (vkQueueSubmit(graphicsQueue, 1, &submitInfo, syncObj.inFlightFences[currentFrame]) != VK_SUCCESS)
         RUN_TIME_ERROR("drawFrame: failed to submit draw command buffer!");
-
+    
     VkPresentInfoKHR presentInfo = {};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
@@ -689,12 +741,32 @@ void VulkanApp::drawFrame()
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = swapChains;
     presentInfo.pImageIndices = &imageIndex;
-
+    
     vkQueuePresentKHR(presentQueue, &presentInfo);
     currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
 
+void VulkanApp::initDebugReportCallback()
+{
+    // Register a callback function for the extension VK_EXT_DEBUG_REPORT_EXTENSION_NAME, so that warnings emitted from the validation
+    // layer are actually printed.
+
+    VkDebugReportCallbackCreateInfoEXT createInfo = {};
+    createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
+    createInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
+    createInfo.pfnCallback = debugReportCallbackFn;
+
+    // We have to explicitly load this function.
+    //
+    auto vkCreateDebugReportCallbackEXT = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT");
+    if (vkCreateDebugReportCallbackEXT == nullptr)
+        RUN_TIME_ERROR("Could not load vkCreateDebugReportCallbackEXT");
+
+    // Create and register callback.
+    if (vkCreateDebugReportCallbackEXT(instance, &createInfo, NULL, &debugReportCallback) != VK_SUCCESS)
+        RUN_TIME_ERROR("You were the Chosen One! It was said that you would destroy the Sith, not join them. bring balance to the force, not leave it in darkness.");
+}
 VkShaderModule VulkanApp::createShaderModule(const std::vector<uint32_t>& code)
 {
     VkShaderModuleCreateInfo createInfo = {};
