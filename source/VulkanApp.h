@@ -15,9 +15,9 @@
 #include <vector>
 #include <cstring>
 
-const int WIDTH  = 800;
+const int WIDTH  = 1000;
 const int HEIGHT = 1000;
-const int MAX_FRAMES_IN_FLIGHT = 2;
+const int MAX_FRAMES_IN_FLIGHT = 3;
 
 static char g_validationLayerData[256];
 static const char* g_debugReportExtName  = VK_EXT_DEBUG_REPORT_EXTENSION_NAME;

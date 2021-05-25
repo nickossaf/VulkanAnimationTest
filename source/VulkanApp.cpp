@@ -76,6 +76,7 @@ void VulkanApp::Init()
 
 void VulkanApp::Run()
 {
+    currentFrame = 0;
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
         drawFrame();
@@ -323,7 +324,6 @@ void VulkanApp::createSwapchain()
 void VulkanApp::createScreenImageViews()
 {
     screenBufferResources.swapChainImageViews.resize(screenBufferResources.swapChainImages.size());
-
     for (size_t i = 0; i < screenBufferResources.swapChainImages.size(); i++) {
         VkImageViewCreateInfo createInfo = {};
         createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -767,6 +767,7 @@ void VulkanApp::initDebugReportCallback()
     if (vkCreateDebugReportCallbackEXT(instance, &createInfo, NULL, &debugReportCallback) != VK_SUCCESS)
         RUN_TIME_ERROR("You were the Chosen One! It was said that you would destroy the Sith, not join them. bring balance to the force, not leave it in darkness.");
 }
+
 VkShaderModule VulkanApp::createShaderModule(const std::vector<uint32_t>& code)
 {
     VkShaderModuleCreateInfo createInfo = {};
