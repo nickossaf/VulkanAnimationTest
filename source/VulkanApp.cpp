@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <sstream>
 #include <cmath>
 
@@ -8,6 +9,8 @@ VulkanApp::~VulkanApp()
 {
     vkFreeMemory(device, vertexMemory, NULL);
     vkDestroyBuffer(device, vertexBuffer, NULL);
+    vkFreeMemory(device, idxMemory, NULL);
+    vkDestroyBuffer(device, idxBuffer, NULL);
 
     auto func = (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugReportCallbackEXT");
     if (func == nullptr)
@@ -47,6 +50,7 @@ VulkanApp::~VulkanApp()
 void VulkanApp::Init()
 {
     glfwInit();
+    initResources();
     createInstance();
     initDebugReportCallback();
     createPhysicalDevice();
@@ -59,6 +63,7 @@ void VulkanApp::Init()
     createGraphicsPipeline();
     createFrameBuffer();
     createVertexBuffer();
+    createIndexBuffer();
     createSyncObjects();
 
     createCommandPool();
@@ -66,12 +71,12 @@ void VulkanApp::Init()
 
     float trianglePos[] =
     {
-        -0.5f, -0.5f,
-        0.5f, -0.5f,
-        0.0f, +0.5f,
+      -0.5f, -0.5f,0,
+      0.5f, -0.5f,0,
+      0.0f, +0.5f,1     
     };
 
-    copyVertices2GPU(trianglePos);
+    copyVertices2GPU();
 }
 
 void VulkanApp::Run()
@@ -83,6 +88,34 @@ void VulkanApp::Run()
     }
 
     vkDeviceWaitIdle(device);
+}
+
+void VulkanApp::initResources()
+{
+
+    std::ifstream vertFile("../resource/vertex.txt");
+    if (!vertFile.is_open())
+        RUN_TIME_ERROR("error loading configured vertices");
+
+    while (!vertFile.eof()) {
+        float vert;
+        vertFile >> vert;
+        vertices.push_back(vert); 
+    }
+
+    vertFile.close();
+
+    std::ifstream idxFile("../resource/index.txt");
+    if (!idxFile.is_open())
+        RUN_TIME_ERROR("error loading configured vert indexes");
+
+    while (!idxFile.eof()) {
+        uint16_t idx;
+        idxFile >> idx;
+        vertIdxs.push_back(idx); 
+    }
+    idxFile.close();
+
 }
 
 void VulkanApp::createInstance()
@@ -414,13 +447,13 @@ void VulkanApp::createGraphicsPipeline()
 
     VkVertexInputBindingDescription inputBinding = { };
     inputBinding.binding = 0;
-    inputBinding.stride = sizeof(float) * 2;
+    inputBinding.stride = sizeof(float) * 7;
     inputBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
     VkVertexInputAttributeDescription attribute = {};
     attribute.binding = 0;
     attribute.location = 0;
-    attribute.format = VK_FORMAT_R32G32_SFLOAT;
+    attribute.format = VK_FORMAT_R32G32_SFLOAT; //VK_FORMAT_R32G32B32_SFLOAT
     attribute.offset = 0;
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
@@ -545,7 +578,7 @@ void VulkanApp::createVertexBuffer()
     VkBufferCreateInfo bufferCreateInfo = {};
     bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     bufferCreateInfo.pNext = nullptr;
-    bufferCreateInfo.size = 6*2*sizeof(float);                         
+    bufferCreateInfo.size = vertices.size() * sizeof(float);                         
     bufferCreateInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;            
 
@@ -579,6 +612,48 @@ void VulkanApp::createVertexBuffer()
 
     if (vkBindBufferMemory(device, vertexBuffer, vertexMemory, 0) != VK_SUCCESS)
         RUN_TIME_ERROR("Error binding vertex memmory");
+  
+}
+
+void VulkanApp::createIndexBuffer()
+{
+    VkBufferCreateInfo bufferCreateInfo = {};
+    bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferCreateInfo.pNext = nullptr;
+    bufferCreateInfo.size = vertIdxs.size() * sizeof(uint16_t);                         
+    bufferCreateInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;            
+
+    if (vkCreateBuffer(device, &bufferCreateInfo, NULL, &idxBuffer) != VK_SUCCESS)
+        RUN_TIME_ERROR("Error creating index buffer");
+    
+    VkMemoryRequirements memoryRequirements;
+    vkGetBufferMemoryRequirements(device, idxBuffer, &memoryRequirements);
+
+    uint32_t memoryTypeIndex = -1;
+    VkPhysicalDeviceMemoryProperties memoryProperties;
+    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
+    for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; ++i)
+    {
+        if ((memoryRequirements.memoryTypeBits & (1 << i)) &&
+            ((memoryProperties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)) {
+                memoryTypeIndex = i;
+                break;
+            }
+    }
+
+    VkMemoryAllocateInfo allocateInfo = {};
+    allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocateInfo.pNext = nullptr;
+    allocateInfo.allocationSize = memoryRequirements.size;
+    allocateInfo.memoryTypeIndex = memoryTypeIndex;
+
+    if (vkAllocateMemory(device, &allocateInfo, nullptr, &idxMemory) != VK_SUCCESS)
+        RUN_TIME_ERROR("Error allocating idx memmory");
+  
+
+    if (vkBindBufferMemory(device, idxBuffer, idxMemory, 0) != VK_SUCCESS)
+        RUN_TIME_ERROR("Error binding idx memmory");
   
 }
 
@@ -652,8 +727,10 @@ void VulkanApp::createCommandBuffers()
         VkBuffer vertexBuffers[] = { vertexBuffer };
         VkDeviceSize offsets[]   = { 0 };
         vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, vertexBuffers, offsets);
+        vkCmdBindIndexBuffer(commandBuffers[i], idxBuffer, 0, VK_INDEX_TYPE_UINT16);
 
-        vkCmdDraw(commandBuffers[i], 3, 1, 0, 0);
+        //vkCmdDraw(commandBuffers[i], vertices.size(), 1, 0, 0);
+        vkCmdDrawIndexed(commandBuffers[i], vertIdxs.size(), 1, 0, 0, 0);
         vkCmdEndRenderPass(commandBuffers[i]);
 
         if (vkEndCommandBuffer(commandBuffers[i]) != VK_SUCCESS) 
@@ -662,7 +739,7 @@ void VulkanApp::createCommandBuffers()
     }
 }
 
-void VulkanApp::copyVertices2GPU(float* vertices)
+void VulkanApp::copyVertices2GPU()
 {
     VkCommandBufferAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -679,7 +756,8 @@ void VulkanApp::copyVertices2GPU(float* vertices)
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT; 
     
     vkBeginCommandBuffer(cmdBuff, &beginInfo);
-    vkCmdUpdateBuffer(cmdBuff, vertexBuffer, 0, 6 * sizeof(float), vertices);
+    vkCmdUpdateBuffer(cmdBuff, vertexBuffer, 0, vertices.size() * sizeof(float), vertices.data());
+    vkCmdUpdateBuffer(cmdBuff, idxBuffer, 0, vertIdxs.size() * sizeof(uint16_t), vertIdxs.data());
     vkEndCommandBuffer(cmdBuff);
 
     VkSubmitInfo submitInfo = {};
@@ -749,21 +827,15 @@ void VulkanApp::drawFrame()
 
 void VulkanApp::initDebugReportCallback()
 {
-    // Register a callback function for the extension VK_EXT_DEBUG_REPORT_EXTENSION_NAME, so that warnings emitted from the validation
-    // layer are actually printed.
-
     VkDebugReportCallbackCreateInfoEXT createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
     createInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
     createInfo.pfnCallback = debugReportCallbackFn;
 
-    // We have to explicitly load this function.
-    //
     auto vkCreateDebugReportCallbackEXT = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT");
     if (vkCreateDebugReportCallbackEXT == nullptr)
         RUN_TIME_ERROR("Could not load vkCreateDebugReportCallbackEXT");
 
-    // Create and register callback.
     if (vkCreateDebugReportCallbackEXT(instance, &createInfo, NULL, &debugReportCallback) != VK_SUCCESS)
         RUN_TIME_ERROR("You were the Chosen One! It was said that you would destroy the Sith, not join them. bring balance to the force, not leave it in darkness.");
 }

@@ -15,8 +15,8 @@
 #include <vector>
 #include <cstring>
 
-const int WIDTH  = 1000;
-const int HEIGHT = 1000;
+const int WIDTH  = 800;
+const int HEIGHT = 800;
 const int MAX_FRAMES_IN_FLIGHT = 3;
 
 static char g_validationLayerData[256];
@@ -53,7 +53,6 @@ public:
     void Run();
     VkDevice& operator()();
 
-
 private:
     const VkQueueFlags           requiredQuequeProps;
     VkInstance                   instance;
@@ -68,8 +67,22 @@ private:
     ScreenBufferResources        screenBufferResources;
     size_t                       currentFrame;
 
+    /*std::vector<float>           vertices = {
+        -0.5f, -0.5f,0,0,0,0,0,
+        0.5f, -0.5f,0,0,0,0,0,
+        0.0f, +0.5f,0,0,0,0,0,
+    };
+    std::vector<uint16_t>        vertIdxs = {
+        0, 1, 2
+    };*/
+    
+    std::vector<float>           vertices;
+    std::vector<uint16_t>        vertIdxs;
+
     VkBuffer                     vertexBuffer;
     VkDeviceMemory               vertexMemory;
+    VkBuffer                     idxBuffer;
+    VkDeviceMemory               idxMemory;
 
     SyncObj                      syncObj;
     VkCommandPool                commandPool;
@@ -79,6 +92,7 @@ private:
     VkPipelineLayout             pipelineLayout;
     VkPipeline                   pipeline;
 
+    void initResources();
     void createInstance();
     void createPhysicalDevice();
     void getQueueFamily();
@@ -91,10 +105,11 @@ private:
     void createGraphicsPipeline();
     void createFrameBuffer();
     void createVertexBuffer();
+    void createIndexBuffer();
     void createSyncObjects();
     void createCommandPool();
     void createCommandBuffers();
-    void copyVertices2GPU(float* vertices);
+    void copyVertices2GPU();
     void drawFrame();
 
     VkShaderModule createShaderModule(const std::vector<uint32_t>& code);
