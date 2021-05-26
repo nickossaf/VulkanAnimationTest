@@ -96,17 +96,22 @@ private:
     VkDeviceMemory               vertexMemory;
     VkBuffer                     idxBuffer;
     VkDeviceMemory               idxMemory;
+
     Image                        grassTextureImage;
     VkImage                      textureImage;
     VkDeviceMemory               textureImageMemory;
     VkImageView                  textureImageView;
     VkSampler                    textureSampler;
+    
     VkBuffer                     stagingBuffer;
     VkDeviceMemory               stagingBufferMemory;
 
     SyncObj                      syncObj;
     VkCommandPool                commandPool;
     std::vector<VkCommandBuffer> commandBuffers;
+
+    VkDescriptorPool             descriptorPool;
+    std::vector<VkDescriptorSet> descriptorSets;
 
     VkRenderPass                 renderPass;
     VkDescriptorSetLayout        descriptorSetLayout;
@@ -131,6 +136,8 @@ private:
     void createCommandPool();
     void createCommandBuffers();
     void createDescriptorSetLayout();
+    void createDescriptorSets();
+    void createDescriptorPool();
     void copyVertices2GPU();
     void createTexture();
     void createStagingBuffer();
