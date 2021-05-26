@@ -7,16 +7,10 @@
 #IncludeRegexTransform: 
 
 /mnt/c/Users/Dell/Desktop/programs/vmk/CG2/vulkan-ray/lin/RayTracing/source/VulkanApp.cpp
-iostream
--
-fstream
--
-sstream
--
-cmath
--
 VulkanApp.h
 /mnt/c/Users/Dell/Desktop/programs/vmk/CG2/vulkan-ray/lin/RayTracing/source/VulkanApp.h
+stb_image.h
+/mnt/c/Users/Dell/Desktop/programs/vmk/CG2/vulkan-ray/lin/RayTracing/source/stb_image.h
 
 /mnt/c/Users/Dell/Desktop/programs/vmk/CG2/vulkan-ray/lin/RayTracing/source/VulkanApp.h
 GLFW/glfw3.h
@@ -29,12 +23,54 @@ vector
 -
 cstring
 -
+iostream
+-
+fstream
+-
+sstream
+-
+cmath
+-
+array
+-
 
 /mnt/c/Users/Dell/Desktop/programs/vmk/CG2/vulkan-ray/lin/RayTracing/source/main.cpp
 iostream
 -
 VulkanApp.h
 /mnt/c/Users/Dell/Desktop/programs/vmk/CG2/vulkan-ray/lin/RayTracing/source/VulkanApp.h
+
+/mnt/c/Users/Dell/Desktop/programs/vmk/CG2/vulkan-ray/lin/RayTracing/source/stb_image.h
+stb_image.h
+/mnt/c/Users/Dell/Desktop/programs/vmk/CG2/vulkan-ray/lin/RayTracing/source/stb_image.h
+stdio.h
+-
+stdlib.h
+-
+stdarg.h
+-
+stddef.h
+-
+stdlib.h
+-
+string.h
+-
+limits.h
+-
+math.h
+-
+stdio.h
+-
+assert.h
+-
+stdint.h
+-
+emmintrin.h
+-
+intrin.h
+-
+arm_neon.h
+-
 
 /usr/include/EGL/egl.h
 EGL/eglplatform.h
@@ -278,6 +314,22 @@ features.h
 stddef.h
 -
 
+/usr/include/assert.h
+features.h
+-
+
+/usr/include/bits/_G_config.h
+bits/types.h
+-
+stddef.h
+-
+bits/types/__mbstate_t.h
+-
+bits/types/wint_t.h
+-
+gconv.h
+-
+
 /usr/include/bits/byteswap-16.h
 
 /usr/include/bits/byteswap.h
@@ -312,13 +364,37 @@ bits/floatn-common.h
 
 /usr/include/bits/fp-logb.h
 
+/usr/include/bits/getopt_core.h
+
+/usr/include/bits/getopt_posix.h
+bits/getopt_core.h
+-
+
 /usr/include/bits/iscanonical.h
 
 /usr/include/bits/libc-header-start.h
 features.h
 -
 
+/usr/include/bits/libio-ldbl.h
+
+/usr/include/bits/libio.h
+bits/_G_config.h
+-
+stdarg.h
+-
+sys/cdefs.h
+-
+shlib-compat.h
+-
+bits/libio-ldbl.h
+-
+
 /usr/include/bits/libm-simd-decl-stubs.h
+
+/usr/include/bits/local_lim.h
+linux/limits.h
+-
 
 /usr/include/bits/long-double.h
 
@@ -333,6 +409,12 @@ bits/libm-simd-decl-stubs.h
 /usr/include/bits/mathcalls.h
 
 /usr/include/bits/mathinline.h
+
+/usr/include/bits/posix1_lim.h
+bits/local_lim.h
+-
+
+/usr/include/bits/posix2_lim.h
 
 /usr/include/bits/pthreadtypes-arch.h
 bits/wordsize.h
@@ -362,6 +444,14 @@ bits/types.h
 bits/types.h
 -
 
+/usr/include/bits/stdio-ldbl.h
+
+/usr/include/bits/stdio.h
+
+/usr/include/bits/stdio2.h
+
+/usr/include/bits/stdio_lim.h
+
 /usr/include/bits/stdlib-bsearch.h
 
 /usr/include/bits/stdlib-float.h
@@ -369,6 +459,14 @@ bits/types.h
 /usr/include/bits/stdlib-ldbl.h
 
 /usr/include/bits/stdlib.h
+
+/usr/include/bits/string_fortified.h
+bits/strings_fortified.h
+-
+
+/usr/include/bits/strings_fortified.h
+
+/usr/include/bits/sys_errlist.h
 
 /usr/include/bits/sysmacros.h
 
@@ -396,7 +494,13 @@ bits/wordsize.h
 bits/typesizes.h
 -
 
+/usr/include/bits/types/FILE.h
+
+/usr/include/bits/types/__FILE.h
+
 /usr/include/bits/types/__locale_t.h
+
+/usr/include/bits/types/__mbstate_t.h
 
 /usr/include/bits/types/__sigset_t.h
 
@@ -446,6 +550,8 @@ bits/types.h
 bits/types.h
 -
 
+/usr/include/bits/types/wint_t.h
+
 /usr/include/bits/typesizes.h
 
 /usr/include/bits/uintn-identity.h
@@ -464,6 +570,12 @@ bits/types.h
 
 /usr/include/bits/wordsize.h
 
+/usr/include/bits/xopen_lim.h
+bits/uio_lim.h
+-
+bits/wordsize.h
+-
+
 /usr/include/endian.h
 features.h
 -
@@ -480,6 +592,16 @@ stdc-predef.h
 sys/cdefs.h
 -
 gnu/stubs.h
+-
+
+/usr/include/gconv.h
+features.h
+-
+bits/types/__mbstate_t.h
+-
+bits/types/wint_t.h
+-
+stddef.h
 -
 
 /usr/include/gnu/stubs-32.h
@@ -503,6 +625,20 @@ stdint.h
 -
 stddef.h
 -
+
+/usr/include/limits.h
+bits/libc-header-start.h
+-
+bits/wordsize.h
+-
+bits/posix1_lim.h
+-
+bits/posix2_lim.h
+-
+bits/xopen_lim.h
+-
+
+/usr/include/linux/limits.h
 
 /usr/include/math.h
 bits/libc-header-start.h
@@ -636,6 +772,34 @@ bits/stdint-intn.h
 bits/stdint-uintn.h
 -
 
+/usr/include/stdio.h
+bits/libc-header-start.h
+-
+stddef.h
+-
+bits/types.h
+-
+bits/types/__FILE.h
+-
+bits/types/FILE.h
+-
+bits/libio.h
+-
+stdarg.h
+-
+bits/stdio_lim.h
+-
+bits/sys_errlist.h
+-
+bits/getopt_posix.h
+-
+bits/stdio.h
+-
+bits/stdio2.h
+-
+bits/stdio-ldbl.h
+-
+
 /usr/include/stdlib.h
 bits/libc-header-start.h
 -
@@ -660,6 +824,28 @@ bits/stdlib-float.h
 bits/stdlib.h
 -
 bits/stdlib-ldbl.h
+-
+
+/usr/include/string.h
+bits/libc-header-start.h
+-
+stddef.h
+-
+bits/types/locale_t.h
+-
+strings.h
+-
+bits/string_fortified.h
+-
+
+/usr/include/strings.h
+features.h
+-
+stddef.h
+-
+bits/types/locale_t.h
+-
+bits/strings_fortified.h
 -
 
 /usr/include/sys/cdefs.h

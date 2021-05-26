@@ -14,6 +14,11 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 #include <cstring>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <cmath>
+#include <array>
 
 const int WIDTH  = 800;
 const int HEIGHT = 800;
@@ -24,6 +29,14 @@ static const char* g_debugReportExtName  = VK_EXT_DEBUG_REPORT_EXTENSION_NAME;
 
 const std::vector<const char*> DEVICE_EXTENTIONS = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME
+};
+
+struct Image
+{
+    int w;
+    int h;
+    int c;
+    unsigned char* image;
 };
 
 struct ScreenBufferResources
@@ -83,12 +96,20 @@ private:
     VkDeviceMemory               vertexMemory;
     VkBuffer                     idxBuffer;
     VkDeviceMemory               idxMemory;
+    Image                        grassTextureImage;
+    VkImage                      textureImage;
+    VkDeviceMemory               textureImageMemory;
+    VkImageView                  textureImageView;
+    VkSampler                    textureSampler;
+    VkBuffer                     stagingBuffer;
+    VkDeviceMemory               stagingBufferMemory;
 
     SyncObj                      syncObj;
     VkCommandPool                commandPool;
     std::vector<VkCommandBuffer> commandBuffers;
 
     VkRenderPass                 renderPass;
+    VkDescriptorSetLayout        descriptorSetLayout;
     VkPipelineLayout             pipelineLayout;
     VkPipeline                   pipeline;
 
@@ -109,7 +130,10 @@ private:
     void createSyncObjects();
     void createCommandPool();
     void createCommandBuffers();
+    void createDescriptorSetLayout();
     void copyVertices2GPU();
+    void createTexture();
+    void createStagingBuffer();
     void drawFrame();
 
     VkShaderModule createShaderModule(const std::vector<uint32_t>& code);
@@ -135,6 +159,7 @@ private:
 
 static void RunTimeError(const char* file, int line, const char* msg);
 
+void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, VkCommandBuffer commandBuffer);
 VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
 VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
 VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, int width, int height);
