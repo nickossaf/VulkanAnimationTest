@@ -33,6 +33,12 @@ cmath
 -
 array
 -
+cstdlib
+-
+glm/glm.hpp
+-
+glm/gtc/matrix_transform.hpp
+-
 
 /mnt/c/Users/Dell/Desktop/programs/vmk/CG2/vulkan-ray/lin/RayTracing/source/main.cpp
 iostream

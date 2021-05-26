@@ -19,6 +19,11 @@
 #include <sstream>
 #include <cmath>
 #include <array>
+#include <cstdlib>
+
+#define GLM_FORCE_RADIANS
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 const int WIDTH  = 800;
 const int HEIGHT = 800;
@@ -37,6 +42,10 @@ struct Image
     int h;
     int c;
     unsigned char* image;
+};
+
+struct UniformBufferObject {
+    uint32_t time;
 };
 
 struct ScreenBufferResources
@@ -102,9 +111,12 @@ private:
     VkDeviceMemory               textureImageMemory;
     VkImageView                  textureImageView;
     VkSampler                    textureSampler;
-    
+
     VkBuffer                     stagingBuffer;
     VkDeviceMemory               stagingBufferMemory;
+
+    std::vector<VkBuffer>        uniformBuffers;
+    std::vector<VkDeviceMemory>  uniformBuffersMemory;
 
     SyncObj                      syncObj;
     VkCommandPool                commandPool;
@@ -132,6 +144,7 @@ private:
     void createFrameBuffer();
     void createVertexBuffer();
     void createIndexBuffer();
+    void createUniformBuffers();
     void createSyncObjects();
     void createCommandPool();
     void createCommandBuffers();
@@ -142,6 +155,7 @@ private:
     void createTexture();
     void createStagingBuffer();
     void drawFrame();
+    void updateUniformBuffer(uint32_t currentImage);
 
     VkShaderModule createShaderModule(const std::vector<uint32_t>& code);
 
