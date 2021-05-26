@@ -1138,13 +1138,25 @@ void VulkanApp::drawFrame()
 }
 
 void VulkanApp::updateUniformBuffer(uint32_t currentImage) {
-    /*static auto startTime = std::chrono::high_resolution_clock::now();
+    static auto startTime = std::chrono::high_resolution_clock::now();
 
     auto currentTime = std::chrono::high_resolution_clock::now();
     float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
-    */
+    
     UniformBufferObject ubo;
-    ubo.time = std::rand() % 10;
+    //ubo.time = 2;//std::rand() % 10;
+    ubo.proj = glm::perspective(glm::radians(45.0f), 
+        screenBufferResources.swapChainExtent.width / (float) screenBufferResources.swapChainExtent.height, 0.1f, 10.0f);
+    /*for(int i =0; i < 4; i++){
+        for(int j = 0; j < 4; j++)
+        {
+            std::cerr << ubo.proj[i][j] << " ";
+        }
+        std::cerr << '\n';
+    }*/
+    ubo.proj[1][1] *= -1;
+    ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 0.1f));
+    ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     void* data;
     vkMapMemory(device, uniformBuffersMemory[currentImage], 0, sizeof(ubo), 0, &data);
     memcpy(data, &ubo, sizeof(ubo));

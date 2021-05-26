@@ -5,7 +5,9 @@ layout(location = 1) in vec2 texCoord;
 
 layout(binding = 1) uniform UniformBufferObject
 {
-  int time;
+  mat4 model;
+  mat4 view;
+  mat4 proj;
 } ubo;
 
 
@@ -13,15 +15,7 @@ layout(location = 0) out vec2 coordTex;
 
 void main(void)
 {
-  mat4 PTr = mat4 (
-    -1.0, 0.0, 0.0, 0.0,
-    0.0, -1.0, 0.0, 0.0,
-    0.0, 0.0, 0.0, 0.0,
-    0.0, 0.0, 1.0, 0.0
-  );
-
-  vec4 pos = vec4(vertex, 1, 1.0);
-  gl_Position = PTr * pos;
-
+  gl_Position = ubo.proj * ubo.view * ubo.model * vec4(vertex, 0.5 * gl_InstanceIndex, 1.0);
+  //gl_Position.x += 0.5 * gl_InstanceIndex;
   coordTex = texCoord;    
 }

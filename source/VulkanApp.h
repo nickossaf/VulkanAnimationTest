@@ -24,6 +24,7 @@
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <chrono>
 
 const int WIDTH  = 800;
 const int HEIGHT = 800;
@@ -45,7 +46,10 @@ struct Image
 };
 
 struct UniformBufferObject {
-    uint32_t time;
+    alignas(16) glm::mat4 model;
+    alignas(16) glm::mat4 view;
+    alignas(16) glm::mat4 proj;
+
 };
 
 struct ScreenBufferResources
@@ -98,6 +102,8 @@ private:
         0, 1, 2
     };*/
     
+    
+
     std::vector<float>           vertices;
     std::vector<uint16_t>        vertIdxs;
 

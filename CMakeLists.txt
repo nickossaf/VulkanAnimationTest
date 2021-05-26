@@ -23,6 +23,7 @@ endif()
 project(${PROJECT_NAME})
 
 find_package(OpenGL REQUIRED)
+find_package(glm REQUIRED)
 find_package(Vulkan)
 if(WIN32)
 	if(NOT Vulkan_FOUND)

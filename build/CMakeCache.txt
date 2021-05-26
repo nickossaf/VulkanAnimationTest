@@ -219,6 +219,9 @@ Vulkan_LIBRARY:FILEPATH=/mnt/c/WINDOWS/system32/vulkan-1.dll
 //No help, variable specified on the command line.
 WIN32:UNINITIALIZED=1
 
+//The directory containing a CMake configuration file for glm.
+glm_DIR:PATH=/usr/lib/cmake/glm
+
 
 ########################
 # INTERNAL cache entries
