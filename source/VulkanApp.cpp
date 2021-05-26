@@ -105,7 +105,8 @@ void VulkanApp::Run()
 void VulkanApp::initResources()
 {
 
-    std::ifstream vertFile("../resource/vertex2.txt");
+    nFrame = 0;
+    std::ifstream vertFile("../resource/vertex3.txt");
     if (!vertFile.is_open())
         RUN_TIME_ERROR("error loading configured vertices");
 
@@ -117,7 +118,7 @@ void VulkanApp::initResources()
 
     vertFile.close();
 
-    std::ifstream idxFile("../resource/index.txt");
+    std::ifstream idxFile("../resource/index3.txt");
     if (!idxFile.is_open())
         RUN_TIME_ERROR("error loading configured vert indexes");
 
@@ -793,7 +794,7 @@ void VulkanApp::createCommandBuffers()
         vkCmdBindIndexBuffer(commandBuffers[i], idxBuffer, 0, VK_INDEX_TYPE_UINT16);
         vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[i], 0, nullptr);
         //vkCmdDraw(commandBuffers[i], vertices.size(), 1, 0, 0);
-        vkCmdDrawIndexed(commandBuffers[i], vertIdxs.size(), 2, 0, 0, 0);
+        vkCmdDrawIndexed(commandBuffers[i], vertIdxs.size(), 100, 0, 0, 0);
         vkCmdEndRenderPass(commandBuffers[i]);
 
         if (vkEndCommandBuffer(commandBuffers[i]) != VK_SUCCESS) 
@@ -1156,11 +1157,13 @@ void VulkanApp::updateUniformBuffer(uint32_t currentImage) {
     }*/
     ubo.proj[1][1] *= -1;
     ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(0.0f), glm::vec3(0.0f, 0.0f, 0.1f));
-    ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.view = glm::lookAt(glm::vec3(0.0f, 2.5f, -6.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    ubo.time = nFrame;
     void* data;
     vkMapMemory(device, uniformBuffersMemory[currentImage], 0, sizeof(ubo), 0, &data);
     memcpy(data, &ubo, sizeof(ubo));
     vkUnmapMemory(device, uniformBuffersMemory[currentImage]);
+    nFrame++;
 }
 
 void VulkanApp::initDebugReportCallback()

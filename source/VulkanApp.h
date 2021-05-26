@@ -49,7 +49,7 @@ struct UniformBufferObject {
     alignas(16) glm::mat4 model;
     alignas(16) glm::mat4 view;
     alignas(16) glm::mat4 proj;
-
+    alignas(16) float time;
 };
 
 struct ScreenBufferResources
@@ -135,6 +135,8 @@ private:
     VkDescriptorSetLayout        descriptorSetLayout;
     VkPipelineLayout             pipelineLayout;
     VkPipeline                   pipeline;
+    
+    float                        nFrame;
 
     void initResources();
     void createInstance();
