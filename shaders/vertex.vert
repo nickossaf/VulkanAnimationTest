@@ -28,7 +28,7 @@ void main(void)
     pos.xy /= 2;
 
     float len = pos.y;
-    pos.z += sin((ubo.time + 5 * gl_InstanceIndex) / 75 + pos.y * 10) / 10 * pos.y;
+    pos.z += sin((ubo.time + 5 * gl_InstanceIndex + 17 * pos.x) / 75 + pos.y * 10) / 10 * pos.y;
     //float angle = pos.y + ubo.time / 90;
     //pos.y += len * asin(angle);
 

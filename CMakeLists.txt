@@ -1,5 +1,7 @@
 cmake_minimum_required (VERSION 3.8)
-set(PROJECT_NAME ${PROJECT}-${BUILD_TYPE}.exe)
+set(PROJECT_NAME ${BUILD_TYPE}.exe)
+
+# to build on my computer cmake -DWIN32=on -DCMAKE_SOURCE_DIR=/mnt/c/WINDOWS/system32 ..
 
 if(WIN32)
     set(TOOLCHAIN_PREFIX x86_64-w64-mingw32)
@@ -14,11 +16,12 @@ if(WIN32)
     #set(CPLUS_INCLUDE_PATH /usr/x86_64-w64-mingw32/include)
     #set(CPP_INCLUDE_PATH /usr/x86_64-w64-mingw32/include)
     #set(CXX_INCLUDE_PATH /usr/x86_64-w64-mingw32/include)
-    set(CMAKE_FIND_ROOT_PATH  /usr/lib/${TOOLCHAIN_PREFIX}/7.3-win32/include/c++)
+    set(CMAKE_FIND_ROOT_PATH  /usr/lib/gcc/${TOOLCHAIN_PREFIX}/7.3-win32/include/c++)
     set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
     set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY NEVER)
     set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE NEVER)
 endif()
+
 
 project(${PROJECT_NAME})
 
@@ -26,13 +29,18 @@ find_package(OpenGL REQUIRED)
 find_package(glm REQUIRED)
 find_package(Vulkan)
 if(WIN32)
-	if(NOT Vulkan_FOUND)
-		find_library(Vulkan_LIBRARY NAMES vulkan-1 vulkan PATHS ${CMAKE_SOURCE_DIR}/libs/vulkan)
-		if(Vulkan_LIBRARY)
-			set(Vulkan_FOUND ON)
-			MESSAGE("Using bundled Vulkan library version")
-        endif()
-    endif()
+    set(Vulkan_INCLUDE_DIR /usr/include)
+    set(Vulkan_LIBRARY /mnt/c/WINDOWS/system32/vulkan-1.dll)
+    set(Vulkan_FOUND ON)
+
+
+	#if(NOT Vulkan_FOUND)
+	#	find_library(Vulkan_LIBRARY NAMES vulkan-1 vulkan PATHS ${CMAKE_SOURCE_DIR}/libs/vulkan)
+	#	if(Vulkan_LIBRARY)
+	#		set(Vulkan_FOUND ON)
+	#		MESSAGE("Using bundled Vulkan library version")
+    #   endif()
+    #endif()
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVK_USE_PLATFORM_WIN32_KHR")
 endif()
 

@@ -11,6 +11,7 @@
 #pragma comment(lib,"glfw3.lib")
 #endif
 
+#define VK_ENABLE_BETA_EXTENSIONS
 #include <vulkan/vulkan.h>
 #include <vector>
 #include <cstring>

@@ -64,6 +64,7 @@ void VulkanApp::Init()
     glfwInit();
     initResources();
     createInstance();
+
     initDebugReportCallback();
     createPhysicalDevice();
     createWindow();

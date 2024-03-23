@@ -1,12 +1,12 @@
 [
 {
   "directory": "/mnt/c/Users/Dell/Desktop/programs/vmk/CG2/vulkan-ray/lin/RayTracing/build",
-  "command": "/usr/bin/x86_64-w64-mingw32-g++  -D_CRT_SECURE_NO_WARNINGS @CMakeFiles/-.exe.dir/includes_CXX.rsp  -DVK_USE_PLATFORM_WIN32_KHR -DNOMINMAX -D_USE_MATH_DEFINES -static-libgcc -static-libstdc++ -idirafter /usr/include/ -g   -std=gnu++1z -o CMakeFiles/-.exe.dir/source/main.cpp.obj -c /mnt/c/Users/Dell/Desktop/programs/vmk/CG2/vulkan-ray/lin/RayTracing/source/main.cpp",
+  "command": "/usr/bin/c++ -D_CRT_SECURE_NO_WARNINGS -I/mnt/c/Users/Dell/Desktop/programs/vmk/CG2/vulkan-ray/lin/RayTracing/include/include  -DNOMINMAX -D_USE_MATH_DEFINES -static-libgcc -static-libstdc++ -idirafter /usr/include/ -g -std=gnu++1z -o CMakeFiles/.exe.dir/source/main.cpp.o -c /mnt/c/Users/Dell/Desktop/programs/vmk/CG2/vulkan-ray/lin/RayTracing/source/main.cpp",
   "file": "/mnt/c/Users/Dell/Desktop/programs/vmk/CG2/vulkan-ray/lin/RayTracing/source/main.cpp"
 },
 {
   "directory": "/mnt/c/Users/Dell/Desktop/programs/vmk/CG2/vulkan-ray/lin/RayTracing/build",
-  "command": "/usr/bin/x86_64-w64-mingw32-g++  -D_CRT_SECURE_NO_WARNINGS @CMakeFiles/-.exe.dir/includes_CXX.rsp  -DVK_USE_PLATFORM_WIN32_KHR -DNOMINMAX -D_USE_MATH_DEFINES -static-libgcc -static-libstdc++ -idirafter /usr/include/ -g   -std=gnu++1z -o CMakeFiles/-.exe.dir/source/VulkanApp.cpp.obj -c /mnt/c/Users/Dell/Desktop/programs/vmk/CG2/vulkan-ray/lin/RayTracing/source/VulkanApp.cpp",
+  "command": "/usr/bin/c++ -D_CRT_SECURE_NO_WARNINGS -I/mnt/c/Users/Dell/Desktop/programs/vmk/CG2/vulkan-ray/lin/RayTracing/include/include  -DNOMINMAX -D_USE_MATH_DEFINES -static-libgcc -static-libstdc++ -idirafter /usr/include/ -g -std=gnu++1z -o CMakeFiles/.exe.dir/source/VulkanApp.cpp.o -c /mnt/c/Users/Dell/Desktop/programs/vmk/CG2/vulkan-ray/lin/RayTracing/source/VulkanApp.cpp",
   "file": "/mnt/c/Users/Dell/Desktop/programs/vmk/CG2/vulkan-ray/lin/RayTracing/source/VulkanApp.cpp"
 }
 ]
